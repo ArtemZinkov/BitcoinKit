@@ -11,7 +11,22 @@ public class Kit: AbstractKit {
 
     private static let name = "BitcoinKit"
 
-    public enum NetworkType: String, CaseIterable { case mainNet, testNet, regTest }
+    public enum NetworkType: String, CaseIterable {
+        case mainNet, testNet, regTest
+        
+        public var network: INetwork {
+            switch self {
+            case .mainNet:
+                return MainNet()
+                
+            case .testNet:
+                return TestNet()
+                
+            case .regTest:
+                return RegTest()
+            }
+        }
+    }
 
     public weak var delegate: BitcoinCoreDelegate? {
         didSet {
@@ -19,7 +34,7 @@ public class Kit: AbstractKit {
         }
     }
 
-    public convenience init(seed: Data, purpose: Purpose, walletId: String, syncMode: BitcoinCore.SyncMode = .api, networkType: NetworkType = .mainNet, confirmationsThreshold: Int = 6, logger: Logger?) throws {
+    public convenience init(seed: Data, purpose: Purpose, walletId: String, syncMode: BitcoinCore.SyncMode = .api, networkType: NetworkType = .mainNet, confirmationsThreshold: Int = 6, logger: Logger?, watchOnlyTransactionSigner: TransactionSigner?) throws {
         let version: HDExtendedKeyVersion
         switch purpose {
         case .bip44: version = .xprv
@@ -35,23 +50,21 @@ public class Kit: AbstractKit {
                 syncMode: syncMode,
                 networkType: networkType,
                 confirmationsThreshold: confirmationsThreshold,
-                logger: logger)
+                logger: logger,
+                watchOnlyTransactionSigner: watchOnlyTransactionSigner)
     }
 
-    public init(extendedKey: HDExtendedKey, purpose: Purpose, walletId: String, syncMode: BitcoinCore.SyncMode = .api, networkType: NetworkType = .mainNet, confirmationsThreshold: Int = 6, logger: Logger?) throws {
-        let network: INetwork
+    public init(extendedKey: HDExtendedKey, purpose: Purpose, walletId: String, syncMode: BitcoinCore.SyncMode = .api, networkType: NetworkType = .mainNet, confirmationsThreshold: Int = 6, logger: Logger?, watchOnlyTransactionSigner: TransactionSigner?) throws {
+        let network = networkType.network
         let logger = logger ?? Logger(minLogLevel: .verbose)
 
         let initialSyncApi: ISyncTransactionApi?
         switch networkType {
             case .mainNet:
-                network = MainNet()
                 initialSyncApi = BlockchainComApi(url: "https://blockchain.info", hsUrl: "https://api.blocksdecoded.com/v1/blockchains/bitcoin", logger: logger)
             case .testNet:
-                network = TestNet()
                 initialSyncApi = BCoinApi(url: "https://btc-testnet.horizontalsystems.xyz/api", logger: logger)
             case .regTest:
-                network = RegTest()
                 initialSyncApi = nil
         }
 
@@ -99,6 +112,7 @@ public class Kit: AbstractKit {
                 .add(plugin: hodler)
                 .set(purpose: purpose)
                 .set(extendedKey: extendedKey)
+                .set(watchOnlyTransactionSigner: watchOnlyTransactionSigner)
                 .build()
 
         super.init(bitcoinCore: bitcoinCore, network: network)
