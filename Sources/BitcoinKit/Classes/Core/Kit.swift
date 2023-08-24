@@ -37,6 +37,7 @@ public class Kit: AbstractKit {
     public convenience init(seed: Data, purpose: Purpose, walletId: String, syncMode: BitcoinCore.SyncMode = .api, networkType: NetworkType = .mainNet, confirmationsThreshold: Int = 6, logger: Logger?, watchOnlyTransactionSigner: TransactionSigner?) throws {
         let version: HDExtendedKeyVersion
         switch purpose {
+        case .bip32: version = .xprv
         case .bip44: version = .xprv
         case .bip49: version = .yprv
         case .bip84: version = .zprv
@@ -122,7 +123,7 @@ public class Kit: AbstractKit {
         bitcoinCore.prepend(addressConverter: bech32AddressConverter)
 
         switch purpose {
-        case .bip44:
+        case .bip44, .bip32:
             bitcoinCore.add(restoreKeyConverter: Bip44RestoreKeyConverter(addressConverter: base58AddressConverter))
             bitcoinCore.add(restoreKeyConverter: Bip49RestoreKeyConverter(addressConverter: base58AddressConverter))
             bitcoinCore.add(restoreKeyConverter: Bip84RestoreKeyConverter(addressConverter: bech32AddressConverter))
